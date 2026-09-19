@@ -1,5 +1,4 @@
 const GREENHOUSE_COMPANIES = [
-  'stripe',
   'airbnb',
   'gitlab',
   'fingerprint',
