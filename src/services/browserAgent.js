@@ -87,11 +87,13 @@ async function fillGreenhouseForm(page, profile, resumePath, appId, evidenceDir)
     return { status: 'failed', reason: 'Email field not found in Greenhouse form.' }
   }
 
-  const fullName = String(profile.fullName || profile.name || 'Candidate').trim()
-  const email = String(profile.email || 'candidate@example.com').trim()
-  const phone = String(profile.phone || '+15555550100').trim()
+  const fullName = String(profile.fullName || profile.name || '').trim()
+  const email = String(profile.email || '').trim()
+  const phone = String(profile.phone || '').trim()
   const [firstName, ...rest] = fullName.split(/\s+/)
-  const lastName = rest.join(' ') || 'Applicant'
+  const lastName = rest.join(' ') || ''
+  const linkedinUrl = String(profile.linkedinUrl || '').trim()
+  const githubUrl = String(profile.githubUrl || '').trim()
 
   async function typeField(sel, val) {
     if (!val) return
@@ -105,16 +107,49 @@ async function fillGreenhouseForm(page, profile, resumePath, appId, evidenceDir)
     } catch {}
   }
 
+  let cleanPhone = phone
+  const hasCountryPicker = await frame.$('.intl-tel-input, .flag-container, select[name*="country" i], .country-select').catch(() => null)
+  if (hasCountryPicker) {
+    cleanPhone = phone.replace(/^\+\d{1,4}\s?/, '').replace(/[-.\s]/g, '')
+  }
+
   await typeField('#first_name, input[name*="first_name" i]', firstName)
   await typeField('#last_name, input[name*="last_name" i]', lastName)
   await typeField('#name, input[name="name" i]', fullName)
   await typeField('input[type="email"], input[name*="email" i], input[id*="email" i]', email)
-  await typeField('#phone, input[type="tel"], input[name*="phone" i]', phone)
+  await typeField('#phone, input[type="tel"], input[name*="phone" i]', cleanPhone)
+  await typeField('#linkedin, input[name*="linkedin" i], input[autocomplete*="url" i]', linkedinUrl)
+  await typeField('#github, input[name*="github" i]', githubUrl)
+
+  // Custom questions
+  await frame.evaluate((p) => {
+    const inputs = Array.from(document.querySelectorAll('input[type="text"], input:not([type]), textarea'))
+    inputs.forEach(input => {
+      const label = (input.closest('.field-wrapper')?.innerText || input.closest('label')?.innerText || input.getAttribute('aria-label') || input.placeholder || input.name || '').toLowerCase()
+      if (!input.value || input.value.trim() === '') {
+        if (label.includes('preferred') || label.includes('prefer') || label.includes('interview process')) input.value = p.firstName
+        else if (label.includes('employer') || label.includes('company')) input.value = p.currentCompany || 'Software Company'
+        else if (label.includes('title') || label.includes('role')) input.value = p.currentRole || 'Software Engineer'
+        else if (label.includes('website') || label.includes('portfolio') || label.includes('link') || label.includes('url')) input.value = p.linkedinUrl || p.githubUrl || ''
+        else if (label.includes('notice') || label.includes('availability')) input.value = 'Available immediately / 30 days'
+        else if (label.includes('salary') || label.includes('compensation') || label.includes('ctc')) input.value = 'Competitive / Open to discussion'
+        else if (label.includes('location') || label.includes('city')) input.value = p.location || 'Bengaluru, India'
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+        input.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+    })
+  }, { firstName, fullName, linkedinUrl, githubUrl, currentCompany: profile.currentCompany, currentRole: profile.targetRole, location: profile.location }).catch(() => {})
 
   if (resumePath && existsSync(resumePath)) {
     try {
-      const fileInput = await frame.$('input[type="file"]')
-      if (fileInput) await fileInput.uploadFile(resumePath)
+      const fileInputs = await frame.$$('input[type="file"]')
+      for (const fileInput of fileInputs) {
+        await fileInput.uploadFile(resumePath).catch(() => {})
+        await fileInput.evaluate(e => {
+          e.dispatchEvent(new Event('change', { bubbles: true }))
+          e.dispatchEvent(new Event('input', { bubbles: true }))
+        }).catch(() => {})
+      }
     } catch {}
   }
 
@@ -134,9 +169,11 @@ async function fillLeverForm(page, profile, resumePath, appId, evidenceDir) {
     return { status: 'failed', reason: 'Email field not found in Lever form.' }
   }
 
-  const fullName = String(profile.fullName || profile.name || 'Candidate').trim()
-  const email = String(profile.email || 'candidate@example.com').trim()
-  const phone = String(profile.phone || '+15555550100').trim()
+  const fullName = String(profile.fullName || profile.name || '').trim()
+  const email = String(profile.email || '').trim()
+  const phone = String(profile.phone || '').trim()
+  const linkedinUrl = String(profile.linkedinUrl || '').trim()
+  const githubUrl = String(profile.githubUrl || '').trim()
 
   async function typeField(sel, val) {
     if (!val) return
@@ -152,11 +189,19 @@ async function fillLeverForm(page, profile, resumePath, appId, evidenceDir) {
   await typeField('input[name="name"]', fullName)
   await typeField('input[name="email"]', email)
   await typeField('input[name="phone"]', phone)
+  await typeField('input[name*="urls[LinkedIn]"], input[name*="linkedin" i]', linkedinUrl)
+  await typeField('input[name*="urls[GitHub]"], input[name*="github" i]', githubUrl)
 
   if (resumePath && existsSync(resumePath)) {
     try {
-      const fileInput = await frame.$('input[type="file"]')
-      if (fileInput) await fileInput.uploadFile(resumePath)
+      const fileInputs = await frame.$$('input[type="file"]')
+      for (const fileInput of fileInputs) {
+        await fileInput.uploadFile(resumePath).catch(() => {})
+        await fileInput.evaluate(e => {
+          e.dispatchEvent(new Event('change', { bubbles: true }))
+          e.dispatchEvent(new Event('input', { bubbles: true }))
+        }).catch(() => {})
+      }
     } catch {}
   }
 
