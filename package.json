@@ -1,0 +1,32 @@
+{
+  "name": "job-agentic-ai",
+  "version": "1.0.0",
+  "description": "Autonomous AI agent that parses resumes, discovers 1-click ATS jobs, scores match fit, and automates real job applications with proof capture.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "cli": "node src/cli.js",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "job-agent",
+    "agentic-ai",
+    "automation",
+    "puppeteer",
+    "greenhouse",
+    "lever",
+    "job-search",
+    "resume-parser"
+  ],
+  "author": "Anshu Pal",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "puppeteer": "^23.11.1"
+  }
+}
